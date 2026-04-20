@@ -1,0 +1,169 @@
+import express from "express";
+import cors from "cors";
+import { Low } from "lowdb";
+import { JSONFile } from "lowdb/node";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// --- DB ---
+const adapter = new JSONFile("db.json");
+const db = new Low(adapter, { posts: [] });
+
+await db.read();
+db.data ||= { posts: [] };
+
+// -------------------- API --------------------
+
+// GET POSTS
+app.get("/api/posts", async (req, res) => {
+  await db.read();
+  res.json(db.data.posts);
+});
+
+// CREATE POST
+app.post("/api/posts", async (req, res) => {
+  const { user, text } = req.body;
+
+  const post = {
+    id: Date.now(),
+    user,
+    text,
+    likes: 0,
+    comments: [],
+    createdAt: new Date()
+  };
+
+  db.data.posts.unshift(post);
+  await db.write();
+
+  res.json(post);
+});
+
+// LIKE
+app.post("/api/like/:id", async (req, res) => {
+  await db.read();
+
+  const post = db.data.posts.find(p => p.id == req.params.id);
+  if (post) post.likes++;
+
+  await db.write();
+  res.json(post);
+});
+
+// COMMENT
+app.post("/api/comment/:id", async (req, res) => {
+  await db.read();
+
+  const post = db.data.posts.find(p => p.id == req.params.id);
+  if (post) post.comments.push(req.body.comment);
+
+  await db.write();
+  res.json(post);
+});
+
+// -------------------- FRONTEND (ONE FILE) --------------------
+
+const frontend = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Social dApp</title>
+  <style>
+    body { font-family: Arial; max-width: 700px; margin: auto; padding: 20px; }
+    textarea, input { width: 100%; margin: 5px 0; padding: 10px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    .post { border: 1px solid #ddd; padding: 10px; margin-top: 10px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<h2>🔥 Permanent Social dApp</h2>
+
+<input id="user" placeholder="Username">
+<textarea id="text" placeholder="Write a post..."></textarea>
+<button onclick="createPost()">Post</button>
+
+<hr>
+
+<div id="feed"></div>
+
+<script>
+async function loadPosts() {
+  const res = await fetch("/api/posts");
+  const posts = await res.json();
+
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  posts.forEach(p => {
+    feed.innerHTML += \`
+      <div class="post">
+        <b>\${p.user}</b>
+        <p>\${p.text}</p>
+
+        ❤️ \${p.likes}
+        <button onclick="likePost(\${p.id})">Like</button>
+
+        <br><br>
+
+        <input id="c\${p.id}" placeholder="comment">
+        <button onclick="comment(\${p.id})">Send</button>
+
+        <div>
+          \${p.comments.map(c => "<p>💬 " + c + "</p>").join("")}
+        </div>
+      </div>
+    \`;
+  });
+}
+
+async function createPost() {
+  const user = document.getElementById("user").value;
+  const text = document.getElementById("text").value;
+
+  await fetch("/api/posts", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ user, text })
+  });
+
+  loadPosts();
+}
+
+async function likePost(id) {
+  await fetch("/api/like/" + id, { method: "POST" });
+  loadPosts();
+}
+
+async function comment(id) {
+  const input = document.getElementById("c" + id);
+
+  await fetch("/api/comment/" + id, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ comment: input.value })
+  });
+
+  loadPosts();
+}
+
+loadPosts();
+</script>
+
+</body>
+</html>
+`;
+
+// FRONTEND ROUTE
+app.get("/", (req, res) => {
+  res.send(frontend);
+});
+
+// -------------------- START SERVER --------------------
+
+app.listen(3000, () => {
+  console.log("🚀 Running on http://localhost:3000");
+});
