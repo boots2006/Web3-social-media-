@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Web3 Social Feed</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+    }
+
+    .container {
+      display: flex;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: #111827;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 20px;
+    }
+
+    .sidebar p {
+      cursor: pointer;
+      margin: 10px 0;
+      color: #cbd5e1;
+    }
+
+    .main {
+      flex: 1;
+      padding: 20px;
+    }
+
+    .post-box {
+      margin-bottom: 20px;
+    }
+
+    .post-box input {
+      width: 70%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    .post-box button {
+      padding: 10px 15px;
+      margin-left: 10px;
+      cursor: pointer;
+      border: none;
+      background: #3b82f6;
+      color: white;
+      border-radius: 5px;
+    }
+
+    .post {
+      background: #1f2937;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+
+    .like-btn {
+      margin-top: 10px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid #3b82f6;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+
+    .like-btn:hover {
+      background: #3b82f6;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h2>Dashboard</h2>
+    <p>Home</p>
+    <p>Profile</p>
+    <p>Notifications</p>
+    <p>Trending</p>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <h1>Web3 Social Feed</h1>
+
+    <div class="post-box">
+      <input id="postInput" placeholder="What's happening?">
+      <button onclick="addPost()">Post</button>
+    </div>
+
+    <div id="feed"></div>
+
+  </main>
+
+</div>
+
+<script>
+  let posts = [];
+
+  function addPost() {
+    const text = document.getElementById("postInput").value;
+
+    if (!text) return;
+
+    posts.unshift({
+      text: text,
+      likes: 0
+    });
+
+    document.getElementById("postInput").value = "";
+
+    render();
+  }
+
+  function likePost(index) {
+    posts[index].likes++;
+    render();
+  }
+
+  function render() {
+    const feed = document.getElementById("feed");
+    feed.innerHTML = "";
+
+    posts.forEach((post, index) => {
+      feed.innerHTML += `
+        <div class="post">
+          <p>${post.text}</p>
+          <button class="like-btn" onclick="likePost(${index})">
+            ❤️ Like (${post.likes})
+          </button>
+        </div>
+      `;
+    });
+  }
+</script>
+
+</body>
+  </html>
